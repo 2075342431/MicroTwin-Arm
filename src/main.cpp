@@ -10,15 +10,14 @@
 
 // --- 1. 硬件引脚 ---
 const int LED_PIN       = 2;
-const int PWM_SERVO_PIN = 15;
-const int BUS_IO_17     = 17;
-const int BUS_IO_5      = 5;
-const int BUS_IO_14     = 14;
+const int PWM_SERVO_PIN = 15; // joint1
+const int BUS_IO_17     = 17; // joint2 (ID 15)
+const int BUS_IO_5      = 5;  // joint3 (ID 12)
+const int BUS_IO_14     = 14; // joint4 (ID 14)
 
 SMS_STS sts_bus2, sts_bus1;
 Servo base_servo;
 
-// --- 2. micro-ROS 变量 ---
 rcl_subscription_t subscriber;
 sensor_msgs__msg__JointState msg;
 rclc_executor_t executor;
@@ -26,52 +25,56 @@ rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
 
-// 为 JointState 消息分配足够的静态内存
-double pos_data[10];
-double vel_data[10];
-double eff_data[10];
-rosidl_runtime_c__String name_data[10];
-char name_buffers[10][20];
+// 预分配内存
+double pos_data[6];
+rosidl_runtime_c__String name_data[6];
+char name_buffers[6][20];
 
-// --- 3. 映射逻辑：将 RViz 弧度转为舵机指令 ---
-uint16_t radToSTS(float rad) {
-    // STS 舵机：2048 为中位 (0 rad)
-    float pos = (rad / 3.1415926) * 2048 + 2048;
-    return (uint16_t)constrain(pos, 0, 4095);
-}
-uint16_t radToPWM(float rad) {
-    // PWM 舵机：1500us 为中位 (0 rad)
-    float us = (rad / 1.5708) * 1000 + 1500;
-    return (uint16_t)constrain(us, 500, 2500);
+// --- 2. 转换逻辑 (包含反向处理) ---
+inline uint16_t radToSTS(float rad, bool reverse = false) {
+    if (reverse) rad = -rad; // 反向处理
+    return (uint16_t)((rad / 3.14159265f) * 2048.0f + 2048.0f);
 }
 
-// --- 4. 订阅回调：拖动滑块时此函数应被触发 ---
+inline uint16_t radToPWM(float rad, bool reverse = true) {
+    if (reverse) rad = -rad; // 反向处理
+    return (uint16_t)((rad / 1.570796f) * 1000.0f + 1500.0f);
+}
+
+// --- 3. 订阅回调 (平滑控制版) ---
 void subscription_callback(const void * msgin) {
-    // 只要收到消息，灯就会闪，说明通信通了
+    const sensor_msgs__msg__JointState * msg = (const sensor_msgs__msg__JointState *)msgin;
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
 
-    const sensor_msgs__msg__JointState * msg = (const sensor_msgs__msg__JointState *)msgin;
-    
-    // 这里的映射关系：
-    // msg->position.data[0] -> joint1 (底座)
-    // msg->position.data[1] -> joint2 (ID 15)
-    // msg->position.data[2] -> joint3 (ID 12)
-    // msg->position.data[3] -> joint4 (ID 14)
-    
     if (msg->position.size >= 4) {
-        base_servo.writeMicroseconds(radToPWM(msg->position.data[0]));
-        sts_bus2.WritePosEx(15, radToSTS(msg->position.data[1]), 1500, 50);
-        sts_bus1.WritePosEx(12, radToSTS(msg->position.data[2]), 1500, 50);
-        sts_bus2.WritePosEx(14, radToSTS(msg->position.data[3]), 1500, 50);
+        // A. PWM 舵机 (joint1) - 设置为反向
+        base_servo.writeMicroseconds(radToPWM(msg->position.data[0], true));
+        
+        // B. 总线舵机 (平滑参数控制)
+        // 参数说明：ID, 位置, 速度(1000), 加速度(30)
+        // 速度 1000 表示平稳运行，加速度 30 消除卡顿感
+        
+        // ID 15 (joint2) - 正向
+        sts_bus2.WritePosEx(15, radToSTS(msg->position.data[1], false), 1000, 30);
+        
+        // ID 12 (joint3) - 正向
+        sts_bus1.WritePosEx(12, radToSTS(msg->position.data[2], false), 1000, 30);
+        
+        // ID 14 (joint4) - 设置为反向
+        sts_bus2.WritePosEx(14, radToSTS(msg->position.data[3], true), 1000, 30);
     }
 }
 
 void setup() {
     pinMode(LED_PIN, OUTPUT);
-    Serial.begin(115200);
+    pinMode(BUS_IO_14, OUTPUT);
+    pinMode(BUS_IO_17, OUTPUT);
+
+    // micro-ROS 高速串口
+    Serial.begin(921600);
     set_microros_serial_transports(Serial);
 
-    // 硬件串口与 GPIO 矩阵映射 (保持接线不动)
+    // 总线硬件串口映射
     Serial2.begin(1000000, SERIAL_8N1, 16, BUS_IO_17); 
     gpio_matrix_out(BUS_IO_14, U2TXD_OUT_IDX, false, false);
     sts_bus2.pSerial = &Serial2;
@@ -79,31 +82,31 @@ void setup() {
     Serial1.begin(1000000, SERIAL_8N1, 4, BUS_IO_5); 
     sts_bus1.pSerial = &Serial1;
 
+    // PWM 舵机
     ESP32PWM::allocateTimer(0);
     base_servo.setPeriodHertz(50);
     base_servo.attach(PWM_SERVO_PIN, 500, 2500);
 
-    // micro-ROS 内存预分配 (关键修复)
+    // 锁定并初始化位置
+    delay(500);
+    sts_bus2.EnableTorque(15, 1);
+    sts_bus1.EnableTorque(12, 1);
+    sts_bus2.EnableTorque(14, 1);
+    
+    // micro-ROS 内存预分配
     msg.position.data = pos_data;
-    msg.position.capacity = 10;
-    msg.velocity.data = vel_data;
-    msg.velocity.capacity = 10;
-    msg.effort.data = eff_data;
-    msg.effort.capacity = 10;
+    msg.position.capacity = 6;
     msg.name.data = name_data;
-    msg.name.capacity = 10;
-    for(int i=0; i<10; i++) {
+    msg.name.capacity = 6;
+    for(int i=0; i<6; i++) {
         msg.name.data[i].data = name_buffers[i];
         msg.name.data[i].capacity = 20;
     }
-
-    delay(2000); // 等待 Agent 启动
 
     allocator = rcl_get_default_allocator();
     rclc_support_init(&support, 0, NULL, &allocator);
     rclc_node_init_default(&node, "micro_twin_arm", "", &support);
 
-    // 订阅话题名必须与 ROS 2 中的一致：joint_states
     rclc_subscription_init_default(
         &subscriber, &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
@@ -114,6 +117,5 @@ void setup() {
 }
 
 void loop() {
-    // 提高执行频率
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
 }
