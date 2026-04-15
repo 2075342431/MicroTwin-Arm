@@ -3,19 +3,26 @@
 #include "rom/gpio.h"
 
 
+
+RobotArm::RobotArm(float l1, float l2, float l3, float l4)
 RobotArm::RobotArm(float l1, float l2, float l3, float l4)
     : L1(l1), L2(l2), L3(l3), L4(l4) {}
 
 
 void RobotArm::begin()
 {
+
+void RobotArm::begin()
+{
     // 串口 2 配置 (ID 15 & ID 14)
+    Serial2.begin(1000000, SERIAL_8N1, 16, PIN_BUS_17);
     Serial2.begin(1000000, SERIAL_8N1, 16, PIN_BUS_17);
     pinMode(PIN_BUS_14, OUTPUT);
     gpio_matrix_out(PIN_BUS_14, U2TXD_OUT_IDX, false, false);
     sts_bus2.pSerial = &Serial2;
 
     // 串口 1 配置 (ID 12)
+    Serial1.begin(1000000, SERIAL_8N1, 4, PIN_BUS_5);
     Serial1.begin(1000000, SERIAL_8N1, 4, PIN_BUS_5);
     sts_bus1.pSerial = &Serial1;
 
@@ -30,9 +37,19 @@ void RobotArm::begin()
     sts_bus2.EnableTorque(14, 1);
 
     loadhome();
+
+    loadhome();
 }
 
 void RobotArm::goHome() {
+    // 自动加上零位偏移
+    double homeAngles[4] = {
+        offset1,
+        offset2,
+        offset3,
+        offset4
+    };
+    setJoints(homeAngles, 4);
     // 自动加上零位偏移
     double homeAngles[4] = {
         offset1,
@@ -47,9 +64,17 @@ uint16_t RobotArm::radToSTS(float rad, bool reverse)
 {
     if (reverse)
         rad = -rad;
+uint16_t RobotArm::radToSTS(float rad, bool reverse)
+{
+    if (reverse)
+        rad = -rad;
     return (uint16_t)((rad / M_PI) * 2048.0f + 2048.0f);
 }
 
+uint16_t RobotArm::radToPWM(float rad, bool reverse)
+{
+    if (reverse)
+        rad = -rad;
 uint16_t RobotArm::radToPWM(float rad, bool reverse)
 {
     if (reverse)
@@ -60,6 +85,8 @@ uint16_t RobotArm::radToPWM(float rad, bool reverse)
 void RobotArm::setJoints(const double* rads, size_t size) {
     if (size >= 4)
     {
+    if (size >= 4)
+    {
         base_servo.writeMicroseconds(radToPWM(rads[0], true));
         sts_bus2.WritePosEx(15, radToSTS(rads[1], false), 1000, 30);
         sts_bus1.WritePosEx(12, radToSTS(rads[2], false), 1000, 30);
@@ -67,6 +94,7 @@ void RobotArm::setJoints(const double* rads, size_t size) {
     }
 }
 
+bool RobotArm::moveTo(float x, float y, float z, float alpha) {
 bool RobotArm::moveTo(float x, float y, float z, float alpha) {
     JointAngles target;
     target.j1 = atan2(y, x);
@@ -79,13 +107,22 @@ bool RobotArm::moveTo(float x, float y, float z, float alpha) {
     if (D > (L2 + L3) || D < abs(L2 - L3))
         return false;
 
+
+    if (D > (L2 + L3) || D < abs(L2 - L3))
+        return false;
+
     float cos_C = (L2 * L2 + L3 * L3 - D_sq) / (2.0f * L2 * L3);
     float C = acos(constrain(cos_C, -1.0f, 1.0f));
     target.j3 = (M_PI - C);
 
     float beta = atan2(z_wrist, r_wrist);
+    target.j3 = (M_PI - C);
+
+    float beta = atan2(z_wrist, r_wrist);
     float cos_gamma = (L2 * L2 + D_sq - L3 * L3) / (2.0f * L2 * D);
     float gamma = acos(constrain(cos_gamma, -1.0f, 1.0f));
+
+    float t2 = beta + gamma;
 
     float t2 = beta + gamma;
     target.j2 = (M_PI / 2.0f) - t2;

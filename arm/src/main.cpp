@@ -90,6 +90,7 @@ void setup()
 
 void loop()
 {
+<<<<<<< HEAD
     char cmd = 0;
     if(Serial.available()) cmd = Serial.read();
 
@@ -97,4 +98,21 @@ void loop()
     if(cmd == 'Z') arm.calibrateHome(); // 调零（电机松手）
     if(cmd == 'S') arm.saveHome();     // 保存新零位
     if(cmd == 'P') arm.printHome();    // 打印零位
+=======
+    // 处理指令
+    if (Serial.available())
+    {
+        // 处理指令
+        if (Serial.available())
+        {
+            char cmd = Serial.read();
+            if (cmd == 'H')
+                arm.goHome();
+            if (cmd == 'T')
+                arm.moveTo(100.0, 0.0, 50.0, 0.0);
+        }
+    }
+
+    rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+>>>>>>> cef8172936136ae6bde2e08712e987b75111313e
 }

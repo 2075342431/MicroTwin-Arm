@@ -29,6 +29,11 @@ public:
     void loadhome();
     void printHome();// 打印当前保存的home位置
 
+    void calibrateHome(); // 校准回原点位置
+    void savehome();
+    void loadhome();
+    void printHome();// 打印当前保存的home位置
+
     // 辅助功能
     Point3D getForwardKinematics(JointAngles angles); // 计算正向运动学
 
