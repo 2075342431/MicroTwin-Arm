@@ -5,6 +5,7 @@
 #include <SCServo.h>
 #include <ESP32Servo.h>
 #include <math.h>
+#include <Preferences.h>  
 
 struct Point3D {float x, y, z;};
 struct JointAngles {float j1, j2, j3, j4;};
@@ -21,6 +22,12 @@ public:
     bool moveTo(float x, float y, float z, float alpha = 0.0f);
     void setJoints(const double* rads, size_t size);
     void goHome();
+    void savehome();
+
+
+    void calibrateHome(); // 校准回原点位置
+    void loadhome();
+    void printHome();// 打印当前保存的home位置
 
     // 辅助功能
     Point3D getForwardKinematics(JointAngles angles); // 计算正向运动学
@@ -28,6 +35,13 @@ public:
 private:
     // 物理长度
     float L1, L2, L3, L4;
+
+    float offset1 = 0.0f;
+    float offset2 = 0.0f;
+    float offset3 = 0.0f;
+    float offset4 = 0.0f;
+
+    Preferences prefs; // 用于存储校准数据
 
     // 硬件对象
     SMS_STS sts_bus2, sts_bus1;
