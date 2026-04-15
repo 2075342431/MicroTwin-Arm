@@ -1,0 +1,25 @@
+# PlatformIO
+arm/.pio/
+arm/.pioenvs/
+arm/.vscode/.browse.c_cpp.db*
+arm/.vscode/launch.json
+arm/.vscode/ipch
+
+# ROS 2 工作空间过滤
+**/build/
+**/install/
+**/log/
+
+
+#python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# 系统与编辑器文件
+.DS_Store
+.vscode/ipch/
+
+
