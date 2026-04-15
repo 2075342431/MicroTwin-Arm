@@ -1,4 +1,0 @@
-.pio/build/fishbot/FrameworkArduino/HWCDC.cpp.o: \
- /home/kk/.platformio/packages/framework-arduinoespressif32/cores/esp32/HWCDC.cpp \
- /home/kk/.platformio/packages/framework-arduinoespressif32/cores/esp32/USB.h \
- /home/kk/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/dio_qspi/include/sdkconfig.h
