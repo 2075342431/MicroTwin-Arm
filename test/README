@@ -1,96 +1,94 @@
 
-This directory is intended for PlatformIO Test Runner and project tests.
+// This directory is intended for PlatformIO Test Runner and project tests.
 
-Unit Testing is a software testing method by which individual units of
-source code, sets of one or more MCU program modules together with associated
-control data, usage procedures, and operating procedures, are tested to
-determine whether they are fit for use. Unit testing finds problems early
-in the development cycle.
+// Unit Testing is a software testing method by which individual units of
+// source code, sets of one or more MCU program modules together with associated
+// control data, usage procedures, and operating procedures, are tested to
+// determine whether they are fit for use. Unit testing finds problems early
+// in the development cycle.
 
-More information about PlatformIO Unit Testing:
-- https://docs.platformio.org/en/latest/advanced/unit-testing/index.html
+// More information about PlatformIO Unit Testing:
+// - https://docs.platformio.org/en/latest/advanced/unit-testing/index.html
 
-#include <micro_ros_platformio.h>
-#include <Arduino.h>
-#include <Esp32PcntEncoder.h>
-#include <Esp32McpwmMotor.h>
-#include "PidController.h"
-#include <SCServo.h> 
-#include <ESP32Servo.h>
+// #include <micro_ros_platformio.h>
+// #include <Arduino.h>
+// #include "PidController.h"
+// #include <SCServo.h> 
+// #include <ESP32Servo.h>
 
-// --- 硬件引脚定义 ---
-const int PWM_SERVO_PIN = 15; // 底座普通 PWM 舵机接在 IO 15
-const int BUS_ID15_IO   = 4;  // 关节 1 (ID 15) 接在 IO 4
-const int BUS_ID12_IO   = 5;  // 关节 2 (ID 12) 接在 IO 5
-const int BUS_ID14_IO   = 14; // 关节 3 (ID 14) 接在 IO 14
+// // --- 硬件引脚定义 ---
+// const int PWM_SERVO_PIN = 15; // 底座普通 PWM 舵机接在 IO 15
+// const int BUS_ID15_IO   = 4;  // 关节 1 (ID 15) 接在 IO 4
+// const int BUS_ID12_IO   = 5;  // 关节 2 (ID 12) 接在 IO 5
+// const int BUS_ID14_IO   = 17; // 关节 3 (ID 14) 接在 IO 17
 
-// --- 舵机 ID 定义 ---
-const uint8_t ID_JOINT_1 = 15;
-const uint8_t ID_JOINT_2 = 12;
-const uint8_t ID_JOINT_3 = 14;
+// // --- 舵机 ID 定义 ---
+// const uint8_t ID_JOINT_1 = 15;
+// const uint8_t ID_JOINT_2 = 12;
+// const uint8_t ID_JOINT_3 = 14;
 
-// --- 对象声明 ---
-// 因为每个舵机在不同的 IO 上，且 SCServo 库依赖 HardwareSerial，
-// 我们必须使用 ESP32 的三个不同硬件串口实例。
-SMS_STS sts15; // 使用 Serial2 (UART2)
-SMS_STS sts12; // 使用 Serial1 (UART1)
-SMS_STS sts14; // 使用 Serial (UART0) - 注意：这会占用 USB 调试串口
+// // --- 对象声明 ---
+// // 因为每个舵机在不同的 IO 上，且 SCServo 库依赖 HardwareSerial，
+// // 我们必须使用 ESP32 的三个不同硬件串口实例。
+// SMS_STS sts15; // 使用 Serial2 (UART2)
+// SMS_STS sts12; // 使用 Serial1 (UART1)
+// SMS_STS sts14; // 使用 Serial (UART0) - 注意：这会占用 USB 调试串口
 
-Servo base_servo; // 底座 PWM 舵机
+// Servo base_servo; // 底座 PWM 舵机
 
-void setup()
-{
-    // 1. 初始化底座 PWM 舵机 (IO 15)
-    ESP32PWM::allocateTimer(0);
-    base_servo.setPeriodHertz(50);
-    base_servo.attach(PWM_SERVO_PIN, 500, 2500);
-    base_servo.write(90); // 初始中位
+// void setup()
+// {
+//     // 1. 初始化底座 PWM 舵机 (IO 15)
+//     ESP32PWM::allocateTimer(0);
+//     base_servo.setPeriodHertz(50);
+//     base_servo.attach(PWM_SERVO_PIN, 500, 2500);
+//     base_servo.write(90); // 初始中位
 
-    // 2. 初始化总线舵机串口 (全部配置为单线半双工模式)
+//     // 2. 初始化总线舵机串口 (全部配置为单线半双工模式)
     
-    // ID 15 -> IO 4 (使用 Serial2)
-    Serial2.begin(1000000, SERIAL_8N1, BUS_ID15_IO, BUS_ID15_IO);
-    sts15.pSerial = &Serial2;
+//     // ID 15 -> IO 4 (使用 Serial2)
+//     Serial2.begin(1000000, SERIAL_8N1, BUS_ID15_IO, BUS_ID15_IO);
+//     sts15.pSerial = &Serial2;
 
-    // ID 12 -> IO 5 (使用 Serial1)
-    Serial1.begin(1000000, SERIAL_8N1, BUS_ID12_IO, BUS_ID12_IO);
-    sts12.pSerial = &Serial1;
+//     // ID 12 -> IO 5 (使用 Serial1)
+//     Serial1.begin(1000000, SERIAL_8N1, BUS_ID12_IO, BUS_ID12_IO);
+//     sts12.pSerial = &Serial1;
 
-    // ID 14 -> IO 14 (使用 Serial / UART0)
-    // 警告：一旦开始，Serial.print 将发送给舵机而非 USB
-    Serial.begin(1000000, SERIAL_8N1, BUS_ID14_IO, BUS_ID14_IO);
-    sts14.pSerial = &Serial;
+//     // ID 14 -> IO 14 (使用 Serial / UART0)
+//     // 警告：一旦开始，Serial.print 将发送给舵机而非 USB
+//     Serial.begin(1000000, SERIAL_8N1, BUS_ID14_IO, BUS_ID14_IO);
+//     sts14.pSerial = &Serial;
 
-    // delay(1000);
+//     // delay(1000);
 
-    // --- 3. 舵机中点校准逻辑 (仅需执行一次) ---
-    // 流程：手动摆好零点位置 -> 取消下面对应行的注释 -> 烧录 -> 运行一次 -> 重新加上注释
+//     // --- 3. 舵机中点校准逻辑 (仅需执行一次) ---
+//     // 流程：手动摆好零点位置 -> 取消下面对应行的注释 -> 烧录 -> 运行一次 -> 重新加上注释
 
-    auto calibrate = [](SMS_STS &s, uint8_t id) {
-        s.unLockEprom(id);
-        s.CalibrationOfs(id);
-        s.LockEprom(id);
-        // delay(100);
-    };
-    calibrate(sts15, ID_JOINT_1);// 这步完成后，舵机的零点位置就被校准了
-    calibrate(sts12, ID_JOINT_2);// 这步完成后，舵机的零点位置就被校准了
-    calibrate(sts14, ID_JOINT_3);// 这步完成后，舵机的零点位置就被校准了
+//     auto calibrate = [](SMS_STS &s, uint8_t id) {
+//         s.unLockEprom(id);
+//         s.CalibrationOfs(id);
+//         s.LockEprom(id);
+//         // delay(100);
+//     };
+//     calibrate(sts15, ID_JOINT_1);// 这步完成后，舵机的零点位置就被校准了
+//     calibrate(sts12, ID_JOINT_2);// 这步完成后，舵机的零点位置就被校准了
+//     calibrate(sts14, ID_JOINT_3);// 这步完成后，舵机的零点位置就被校准了
 
-    // --- 4. 机械臂开机平滑复位 (防止卡死) ---
-    // 目标位置 2048 (180度), 速度 1500, 加速度 50
-    uint16_t target = 2048;
-    uint16_t speed = 1500;
-    uint8_t acc = 50;
+//     // --- 4. 机械臂开机平滑复位 (防止卡死) ---
+//     // 目标位置 2048 (180度), 速度 1500, 加速度 50
+//     uint16_t target = 2048;
+//     uint16_t speed = 1500;
+//     uint8_t acc = 50;
 
-    sts15.WritePosEx(ID_JOINT_1, target, speed, acc);
-    sts12.WritePosEx(ID_JOINT_2, target, speed, acc);
-    sts14.WritePosEx(ID_JOINT_3, target, speed, acc);
-}
+//     sts15.WritePosEx(ID_JOINT_1, target, speed, acc);
+//     sts12.WritePosEx(ID_JOINT_2, target, speed, acc);
+//     sts14.WritePosEx(ID_JOINT_3, target, speed, acc);
+// }
 
-void loop()
-{
-    // 循环逻辑
-}
+// void loop()
+// {
+//     // 循环逻辑
+// }
 
 
 
