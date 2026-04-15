@@ -10,6 +10,7 @@
             "includePath": [
                 "/home/kk/Desktop/MicroTwin-Arm/arm/include",
                 "/home/kk/Desktop/MicroTwin-Arm/arm/src",
+                "/home/kk/Desktop/MicroTwin-Arm/arm/lib/RobotArm",
                 "/home/kk/Desktop/MicroTwin-Arm/arm/.pio/libdeps/fishbot/ESP32Servo/src",
                 "/home/kk/Desktop/MicroTwin-Arm/arm/.pio/libdeps/fishbot/SCServo/src",
                 "/home/kk/Desktop/MicroTwin-Arm/arm/.pio/libdeps/fishbot/micro_ros_platformio",
@@ -213,7 +214,6 @@
                 "/home/kk/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                 "/home/kk/.platformio/packages/framework-arduinoespressif32/variants/esp32",
                 "/home/kk/Desktop/MicroTwin-Arm/arm/lib/PidController",
-                "/home/kk/Desktop/MicroTwin-Arm/arm/lib/RobotArm",
                 "/home/kk/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
                 "/home/kk/.platformio/packages/framework-arduinoespressif32/libraries/AsyncUDP/src",
                 "/home/kk/.platformio/packages/framework-arduinoespressif32/libraries/BLE/src",
@@ -254,6 +254,7 @@
                 "path": [
                     "/home/kk/Desktop/MicroTwin-Arm/arm/include",
                     "/home/kk/Desktop/MicroTwin-Arm/arm/src",
+                    "/home/kk/Desktop/MicroTwin-Arm/arm/lib/RobotArm",
                     "/home/kk/Desktop/MicroTwin-Arm/arm/.pio/libdeps/fishbot/ESP32Servo/src",
                     "/home/kk/Desktop/MicroTwin-Arm/arm/.pio/libdeps/fishbot/SCServo/src",
                     "/home/kk/Desktop/MicroTwin-Arm/arm/.pio/libdeps/fishbot/micro_ros_platformio",
@@ -457,7 +458,6 @@
                     "/home/kk/.platformio/packages/framework-arduinoespressif32/cores/esp32",
                     "/home/kk/.platformio/packages/framework-arduinoespressif32/variants/esp32",
                     "/home/kk/Desktop/MicroTwin-Arm/arm/lib/PidController",
-                    "/home/kk/Desktop/MicroTwin-Arm/arm/lib/RobotArm",
                     "/home/kk/.platformio/packages/framework-arduinoespressif32/libraries/ArduinoOTA/src",
                     "/home/kk/.platformio/packages/framework-arduinoespressif32/libraries/AsyncUDP/src",
                     "/home/kk/.platformio/packages/framework-arduinoespressif32/libraries/BLE/src",
