@@ -93,9 +93,8 @@ void loop()
     char cmd = 0;
     if(Serial.available()) cmd = Serial.read();
 
-    if(cmd == 'S') arm.saveHome();      // 保存新零位
-
     if(cmd == 'H') arm.goHome();        // 回零（用校准后的）
     if(cmd == 'Z') arm.calibrateHome(); // 调零（电机松手）
+    if(cmd == 'S') arm.saveHome();     // 保存新零位
     if(cmd == 'P') arm.printHome();    // 打印零位
 }

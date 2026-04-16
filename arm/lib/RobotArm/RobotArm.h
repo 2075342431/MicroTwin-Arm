@@ -22,7 +22,9 @@ public:
 
     void begin();
     bool moveTo(float x, float y, float z, float alpha = 0.0f);
+
     void setJoints(const double* rads, size_t size);
+
     void goHome();
     Point3D getForwardKinematics(JointAngles angles);
 
