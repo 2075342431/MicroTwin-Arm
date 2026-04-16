@@ -90,12 +90,23 @@ void setup()
 
 void loop()
 {
-    char cmd = 0;
-    if(Serial.available()) cmd = Serial.read();
+    float centerX = 120.0; // 圆心 X
+    float centerY = 0.0;   // 圆心 Y
+    float radius = 40.0;   // 半径
+    float height = 80.0;   // 固定高度 Z
+    float angle_alpha = 0; // 夹爪保持水平
 
-    if(cmd == 'S') arm.saveHome();      // 保存新零位
+    for (int i = 0; i < 360; i += 10)
+    {
+        float rad = i * M_PI / 180.0;
+        float x = centerX + radius * cos(rad);
+        float y = centerY + radius * sin(rad);
 
-    if(cmd == 'H') arm.goHome();        // 回零（用校准后的）
-    if(cmd == 'Z') arm.calibrateHome(); // 调零（电机松手）
-    if(cmd == 'P') arm.printHome();    // 打印零位
+        if (!arm.moveTo_2 (x, y, height, angle_alpha))
+        {
+            Serial.printf("Point Out of Reach: %.1f, %.1f\n", x, y);
+        }
+        delay(100);
+    }
+    delay(5000);
 }

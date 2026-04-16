@@ -110,6 +110,42 @@ bool RobotArm::moveTo(float x, float y, float z, float alpha) {
     return true;
 }
 
+// 你提供的 IK 算法实现
+bool RobotArm::moveTo_2(float x, float y, float z, float alpha) {    
+    JointAngles target;
+    target.j1 = atan2(y, x);
+    
+    float r_total = sqrt(x * x + y * y);
+    // 这里的 L4 * cos(alpha) 是基于你方案中 L4 为末端执行器的逻辑
+    float r_wrist = r_total - L4 * cos(alpha);
+    float z_wrist = z - L1 - L4 * sin(alpha);
+    
+    float D_sq = r_wrist * r_wrist + z_wrist * z_wrist;
+    float D = sqrt(D_sq);
+    
+    // 工作空间检查：三角形两边之和必须大于第三边
+    if (D > (L2 + L3) || D < abs(L2 - L3)) return false;
+    
+    float cos_C = (L2 * L2 + L3 * L3 - D_sq) / (2.0f * L2 * L3);
+    float C = acos(constrain(cos_C, -1.0f, 1.0f));
+    target.j3 = (M_PI - C); 
+    
+    float beta = atan2(z_wrist, r_wrist); 
+    float cos_gamma = (L2 * L2 + D_sq - L3 * L3) / (2.0f * L2 * D);
+    float gamma = acos(constrain(cos_gamma, -1.0f, 1.0f));
+    
+    float t2 = beta + gamma; 
+    target.j2 = (M_PI / 2.0f) - t2;
+    
+    float t3 = t2 - target.j3;
+    target.j4 = t3 - alpha;
+
+    // 输出结果用于调试
+    Serial.printf("Target(%.1f, %.1f, %.1f) -> J1:%.2f J2:%.2f J3:%.2f J4:%.2f\n", 
+                  x, y, z, target.j1, target.j2, target.j3, target.j4);
+    return true;
+}
+
 Point3D RobotArm::getForwardKinematics(JointAngles angles) {
     Point3D p;
     float t2 = (M_PI / 2.0f) - angles.j2;
